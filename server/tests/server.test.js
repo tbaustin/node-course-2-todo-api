@@ -5,20 +5,25 @@ const {ObjectID} = require('mongodb');
 const {app} = require('./../server.js');
 const {Todo} = require('./../models/todo.js');
 
+//**************TEST TODOS**********************
 const todos = [{
   _id: new ObjectID(),
   text: 'First test todo'
 }, {
   _id: new ObjectID(),
-  text: 'Second test todo'
+  text: 'Second test todo',
+  completed: true,
+  completedAt: 333
 }];
 
+//**********Remove Todos from database and insert test todos************
 beforeEach((done) => {
   Todo.remove({}).then(() => {
     return Todo.insertMany(todos);
   }).then(() => done());
 });
 
+//**************TEST POST**********************
 describe('POST /todos', () => {
   it('should create a new todo', (done) => {
     var text = 'Test todo text';
@@ -63,6 +68,7 @@ describe('POST /todos', () => {
 
 });
 
+//**************TEST GET**********************
 describe('GET /todos', () => {
   it('should get all todos', (done) => {
     request(app)
@@ -108,6 +114,7 @@ describe('GET /todos/:id', () => {
 
 });
 
+//**************TEST DELETE**********************
 describe('DELETE /todos/:id', () => {
   it('should remove a todo', (done) => {
     var hexId = todos[1]._id.toHexString();
@@ -147,5 +154,47 @@ describe('DELETE /todos/:id', () => {
       .expect(404)
       .end(done)
   });
-  
+
+});
+
+//**************TEST UPDATE**********************
+describe('PATCH /todos/:id', () => {
+  it('should update the todo', (done) => {
+    var hexId = todos[0]._id.toHexString();
+    var text = 'This should be the new text';
+
+    request(app)
+      .patch(`/todos/${hexId}`)
+      .send({
+        completed: true,
+        text: text
+      })
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.todo.text).toBe(text);
+        expect(res.body.todo.completed).toBe(true);
+        expect(res.body.todo.completedAt).toBeA('number');
+      })
+      .end(done);
+  });
+
+  it('should clear completedAt when todo is not completed', (done) => {
+    var hexId = todos[1]._id.toHexString();
+    var text = 'This should be the new text for the second todo';
+
+    request(app)
+      .patch(`/todos/${hexId}`)
+      .send({
+        text: text,
+        completed: false
+      })
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.todo.text).toBe(text);
+        expect(res.body.todo.completed).toBe(false);
+        expect(res.body.todo.completedAt).toNotExist();
+      })
+      .end(done);
+  });
+
 });
